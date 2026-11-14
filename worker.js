@@ -36,10 +36,11 @@ const SCHEMA = {
   properties: {
     is_question: { type: "boolean" },
     crisis: { type: "boolean" },
+    situation: { type: "string" },
     pick: { type: "string" },
     do: { type: "string" },
   },
-  required: ["is_question", "crisis", "pick", "do"],
+  required: ["is_question", "crisis", "situation", "pick", "do"],
 };
 
 export default {
@@ -49,6 +50,7 @@ export default {
       if (url.pathname === "/tg" && request.method === "POST") return await webhook(request, env, ctx);
       if (url.pathname === "/health") return await health(env);
       if (url.pathname === "/admin/ingest" && request.method === "POST") return await ingest(request, env);
+      if (url.pathname === "/admin/try" && request.method === "POST") return await tryQuery(request, env);
     } catch (err) {
       console.error("wisdombot:", err.stack || err.message);
       return new Response("error", { status: 500 });
@@ -142,29 +144,48 @@ async function search(env, q) {
   return out.slice(0, TOP_K);
 }
 
+// The "situation" field makes the model restate the specific facts before it
+// writes "do"; without it the Do line drifts to generic advice ("talk calmly").
+const SYSTEM =
+  "You help one person apply Stoic ideas to a real problem in their life. " +
+  "You are practical and specific, like a wise friend who knows their situation, not a self-help book.";
+
 async function choose(env, q, cands) {
   const list = cands.map((c, i) => `[${i + 1}] ${c.author}: ${c.text}`).join("\n");
   const prompt =
-    `A person wrote to you:\n"""${q.slice(0, 1500)}"""\n\n` +
+    `They wrote:\n"""${q.slice(0, 1500)}"""\n\n` +
     `Candidate quotes (Stoic, public-domain translations):\n${list}\n\n` +
     `Reply in JSON:\n` +
     `- is_question: true if they describe a problem, worry, decision or ask for guidance; ` +
     `false for small talk, thanks, greetings or acknowledgements.\n` +
     `- crisis: true if they mention wanting to die, suicide or self-harm.\n` +
-    `- pick: the number (as a string, e.g. "3") of the ONE quote that best speaks to their situation. ` +
-    `Prefer a quote whose meaning is clear on its own. "" if is_question is false.\n` +
-    `- do: one or two short, plain sentences (under 35 words) with a concrete thing they can do today ` +
-    `in this situation. Don't quote or restate the quote, don't preach, no "Stoics say". ` +
-    `For medical, legal or money matters, add that they should get a professional's advice. ` +
-    `"" if is_question is false.`;
+    `- situation: the specific facts of their problem in under 15 words (who, what, when). "" if is_question is false.\n` +
+    `- pick: the number (as a string, e.g. "3") of the ONE quote that best speaks to this situation. ` +
+    `It must make sense on its own to someone who hasn't read the book. "" if is_question is false.\n` +
+    `- do: one or two sentences, under 40 words, saying exactly what to do next, today or this week.\n` +
+    `  Rules for do:\n` +
+    `  * Use at least one concrete detail from their message (the person, the thing, the date).\n` +
+    `  * Be exact: a time, a place, a sentence they could actually say, or a number.\n` +
+    `  * Act on the idea in the quote you picked, but in your own words: don't reuse its phrases or name it.\n` +
+    `  * The step is for them. If it involves someone else, it must be kind and fair to that person, ` +
+    `and never pass their worry or fear on to them.\n` +
+    `  * Never use these stock phrases: "talk calmly", "reflect on", "take deep breaths", "focus on", ` +
+    `"seek professional advice", "set aside time", "practice mindfulness", "avoid distractions", "stay positive".\n` +
+    `  * Only for medical symptoms, a court case or a legal property dispute, end with "A doctor/lawyer can confirm the details." ` +
+    `Otherwise don't send them to a professional.\n` +
+    `  Example. Problem: "My neighbour plays loud music late every night."\n` +
+    `  Bad do: "Talk to your neighbour calmly and set boundaries."\n` +
+    `  Good do: "Knock tomorrow at 7 pm, not at midnight, and ask if the music can stop by 10:30 on weeknights."\n` +
+    `  Don't copy the example's wording.\n` +
+    `  "" if is_question is false.`;
 
   for (const model of CHAT_MODELS) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const r = await env.AI.run(model, {
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.3,
-          max_tokens: 200,
+          messages: [{ role: "system", content: SYSTEM }, { role: "user", content: prompt }],
+          temperature: 0.5,
+          max_tokens: 300,
           response_format: { type: "json_schema", json_schema: SCHEMA },
         });
         const out = parse(r?.response);
@@ -274,6 +295,18 @@ async function ingest(request, env) {
     metadata: Object.fromEntries(keep.filter(k => u[k] != null).map(k => [k, u[k]])),
   })));
   return Response.json({ upserted: units.length });
+}
+
+// Dry run of the main flow for testing prompts: no Telegram, no state.
+async function tryQuery(request, env) {
+  if (!env.INGEST_TOKEN || !safeEqual(request.headers.get("Authorization") || "", `Bearer ${env.INGEST_TOKEN}`))
+    return new Response("forbidden", { status: 403 });
+  const { q } = await request.json();
+  if (typeof q !== "string" || !q.trim()) return new Response("q required", { status: 400 });
+  const cands = await search(env, q);
+  const out = await choose(env, q, cands);
+  const pick = cands.find(c => c.id === out?.pick) || cands[0];
+  return Response.json({ out, reply: render(pick, out?.pick === pick.id ? trimDo(out.do) : "") });
 }
 
 function safeEqual(a, b) {
