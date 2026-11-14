@@ -4,7 +4,7 @@
     python3 -I build/split.py RAW_DIR OUT_DIR
 
 Writes OUT_DIR/passages.jsonl (one full passage per line, used by /source) and
-OUT_DIR/units.jsonl (1-2 sentence spans of 8-40 words; what the bot quotes) and
+OUT_DIR/units.jsonl (1-2 sentence spans of 12-40 words; what the bot quotes) and
 OUT_DIR/public/p/<shard>.json (passages served to the Worker for /source).
 Text is cut only at sentence boundaries, never edited, apart from removing
 footnote markers and joining wrapped lines.
@@ -16,7 +16,7 @@ import pathlib
 import re
 import sys
 
-MIN_WORDS, MAX_WORDS = 8, 40
+MIN_WORDS, MAX_WORDS = 12, 40   # under 12 words, most lines were fragments
 
 # A unit starting with one of these leans on the sentence before it.
 DEPENDENT_START = re.compile(

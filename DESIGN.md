@@ -25,7 +25,7 @@ Confirm the exact Gutenberg/Wikisource IDs and copyright status at build time. L
 
 Size estimate: about 3,000–4,000 passages.
 
-**Quote units.** Replies show only 1–2 lines, so search and selection work on short spans, not whole passages. The build step splits each passage into sentences. It then makes a quote unit from every single sentence and every pair of adjacent sentences, keeping only units of **8–40 words**. Each unit keeps its parent ID: `M 5.16#1` is sentence 1 of Meditations 5.16, and `M 5.16#1-2` is sentences 1–2. The text is cut only at sentence boundaries and never edited, so a quote is always the translator's exact words. Expect about 25,000 units, well inside the Vectorize free tier.
+**Quote units.** Replies show only 1–2 lines, so search and selection work on short spans, not whole passages. The build step splits each passage into sentences. It then makes a quote unit from every single sentence and every pair of adjacent sentences, keeping only units of **12–40 words** (raised from 8 after testing: shorter lines were mostly fragments). Each unit keeps its parent ID: `M 5.16#1` is sentence 1 of Meditations 5.16, and `M 5.16#1-2` is sentences 1–2. The text is cut only at sentence boundaries and never edited, so a quote is always the translator's exact words. About 7,000 are indexed, well inside the Vectorize free tier.
 
 A sentence that only makes sense in context (it starts with "This", "For", "But", "Therefore", or is a bare fragment) gets marked `standalone:false` at tagging time and is never shown alone. This stops quotes that read well but mean something different out of context.
 
