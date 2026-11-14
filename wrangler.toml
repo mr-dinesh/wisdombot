@@ -1,0 +1,22 @@
+name = "wisdombot"
+main = "worker.js"
+compatibility_date = "2026-04-22"   # capped at what local workerd supports (wrangler 4.83)
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "wisdombot-stoic"      # wrangler vectorize create wisdombot-stoic --dimensions=384 --metric=cosine
+
+[[kv_namespaces]]
+binding = "STATE"                   # last question per user, 1 h TTL (for /more and /source)
+id = "a55925d32a7d47f1bb7520895547a153"
+
+# Full passages for /source, sharded by work (corpus/public/p/*.json). Public-domain text.
+[assets]
+directory = "corpus/public"
+binding = "ASSETS"
+
+# Secrets (wrangler secret put …): TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET,
+# ALLOWED_USER_IDS, INGEST_TOKEN

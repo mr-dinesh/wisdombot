@@ -1,0 +1,27 @@
+# Passages never quoted. One ID per line; a letter ID (S Ep 70) excludes the whole letter.
+# build/split.py also drops any unit matching its HARMFUL regex (suicide, "the door is open", ...).
+# Reason after the #. Review this list when the corpus changes.
+S Ep 70        # whole letter argues for suicide as a choice
+S Ep 77        # whole letter: Marcellinus' suicide, presented approvingly
+S Ep 12.10     # "the way out" / no one is kept in life against his will
+S Ep 24.22     # lust for death
+S Ep 24.23
+S Ep 24.24
+S Ep 24.25
+S Ep 24.26
+S Ep 58.32     # whether to end one's life in old age
+S Ep 58.33
+S Ep 58.34
+S Ep 58.35
+S Ep 58.36
+S Ep 65.22     # body as a prison, longing to leave it
+S Ep 91.21     # death as release
+M 1            # Book 1 is a list of thanks to teachers and family, not advice
+M 3.1          # leave life if the mind begins to fail
+M 5.29         # "the house is smoky, I quit it"
+M 8.47         # depart from life content
+M 10.8         # depart at once from life
+M 10.22        # pass out of life
+M 10.32        # it is reasonable to go out of life
+M 11.3         # readiness to be separated from the body
+M 12.36        # "depart then satisfied"
